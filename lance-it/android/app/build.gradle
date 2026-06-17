@@ -1,0 +1,16 @@
+apply plugin: "com.android.application"
+apply plugin: "com.google.gms.google-services"
+
+android {
+    namespace "com.example.lance_it"
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.example.lance_it"
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
+}
