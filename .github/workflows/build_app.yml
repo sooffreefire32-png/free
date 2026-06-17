@@ -1,0 +1,164 @@
+name: Build Flutter App and Auto-Fix
+
+on:
+  workflow_run:
+    workflows: ["Generate Flutter App Code"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write # To commit fixed code
+  models: read    # To use GitHub Models for error fixing
+
+jobs:
+  build-and-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python dependencies
+        run: pip install requests
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+
+      - name: Find generated app directory
+        id: find_app_dir
+        run: |
+          APP_DIR=$(find apps -maxdepth 2 -type d -name "generated_app" | head -n 1)
+          if [ -z "$APP_DIR" ]; then
+            echo "No generated app directory found." >&2
+            exit 1
+          fi
+          echo "APP_DIR=$APP_DIR" >> $GITHUB_ENV
+
+      - name: Get Flutter packages
+        run: flutter pub get
+        working-directory: ${{ env.APP_DIR }}
+
+      - name: Build and Auto-Fix Loop
+        id: build_loop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          BUILD_SUCCESS=false
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES: Building Flutter APK..."
+            if flutter build apk --release --verbose > build_log.txt 2>&1; then
+              echo "Flutter build successful!"
+              BUILD_SUCCESS=true
+              break
+            else
+              echo "Flutter build failed. Attempting to fix..."
+              ERROR_LOG=$(tail -n 500 build_log.txt)
+              echo "Error log captured. Sending to AI for fix..."
+
+              python -c "\
+                import requests
+                import os
+                import json
+
+                error_log = os.environ.get(\'ERROR_LOG\')
+                github_token = os.environ.get(\'GITHUB_TOKEN\')
+                app_dir = os.environ.get(\'APP_DIR\')
+
+                if not error_log or not github_token or not app_dir:
+                    print(\'Error: ERROR_LOG, GITHUB_TOKEN, or APP_DIR not found.\')
+                    exit(1)
+
+                headers = {
+                    \'Authorization\': f\'Bearer {github_token}\',
+                    \'Content-Type\': \'application/json\',
+                    \'Accept\': \'application/vnd.github+json\',
+                    \'X-GitHub-Api-Version\': \'2022-11-28\'
+                }
+
+                # Read all relevant files from the app directory to provide context to the AI
+                # This is a simplified example; in a real scenario, you'd want to be more selective
+                # and potentially only send files mentioned in the error log.
+                files_to_send = {}
+                for root, _, files in os.walk(app_dir):
+                    for file in files:
+                        if file.endswith(('.dart', '.yaml', '.gradle', '.xml')):
+                            file_path = os.path.join(root, file)
+                            try:
+                                with open(file_path, \'r\') as f:
+                                    files_to_send[file_path.replace(app_dir + os.sep, \'\')] = f.read()
+                            except Exception as e:
+                                print(f\'Could not read {file_path}: {e}\')
+
+                prompt_messages = [
+                    {
+                        \'role\': \'system\',
+                        \'content\': \'You are an expert Flutter debugger. Analyze the provided build error log and the Flutter project files. Identify the root cause of the error and provide a fix. The fix should be a JSON object with a single key "files", where the value is an array of objects. Each object in the array should have "path" and "content" keys, representing the file to be modified and its new content. Only provide files that need changes. If no fix is possible, return an empty "files" array. Example: { "files": [ { "path": "lib/main.dart", "content": "// Fixed code" }, { "path": "pubspec.yaml", "content": "// Fixed pubspec" } ] }\'
+                    },
+                    {
+                        \'role\': \'user\',
+                        \'content\': f\'Flutter build failed with the following error:\n```\n{error_log}\n```\n\nHere are the relevant project files:\n```json\n{json.dumps(files_to_send, indent=2)}\n```\n\nPlease provide a fix in JSON format.\'
+                    }
+                ]
+
+                data = {
+                    \'model\': \'openai/gpt-4o\', # Or another suitable model
+                    \'messages\': prompt_messages,
+                    \'response_format\': {\'type\': \'json_object\'}
+                }
+
+                response = requests.post(\'https://models.github.ai/inference/chat/completions\', headers=headers, json=data)
+                response.raise_for_status()
+                fix_data = response.json()
+
+                fixes = fix_data.get(\'choices\', [{}])[0].get(\'message\', {}).get(\'content\', {})
+                if fixes and fixes.get(\'files\'):
+                    print(\'AI suggested fixes. Applying them...\')
+                    for file_data in fixes[\'files\']:
+                        file_path = os.path.join(app_dir, file_data[\'path\'])
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        with open(file_path, \'w\') as f:
+                            f.write(file_data[\'content\'])
+                        print(f\'Applied fix to {file_path}\')
+                    
+                    # Commit the fix
+                    os.system(f\'git config user.name "github-actions[bot]"\')
+                    os.system(f\'git config user.email "github-actions[bot]@users.noreply.github.com"\')
+                    os.system(f\'git add {app_dir}\')
+                    os.system(f\'git commit -m "fix: AI-powered build error resolution (retry {RETRY_COUNT + 1})"\')
+                    os.system(f\'git push\')
+                else:
+                    print(\'AI could not provide a fix or returned an empty fix.\')
+
+              " > ai_fix_output.txt 2>&1
+
+              cat ai_fix_output.txt
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            fi
+          done
+
+          if [ "$BUILD_SUCCESS" = "false" ]; then
+            echo "Flutter build failed after $MAX_RETRIES attempts."
+            exit 1
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: ${{ env.APP_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: ${{ env.APP_DIR }}/build/app/outputs/bundle/release/app-release.aab

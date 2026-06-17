@@ -1,0 +1,1 @@
+Create a simple Flutter counter application with a button to increment the counter and a text display for the current count.
