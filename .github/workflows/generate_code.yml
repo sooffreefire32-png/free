@@ -67,9 +67,9 @@ jobs:
             "app_name": "folder-name-in-kebab-case",
             "description": "short description",
             "tech_stack": {
-              "frontend": "Flutter",
-              "backend": "Firebase/Mock",
-              "database": "Cloud Firestore/Mock"
+              "frontend": "technology used",
+              "backend": "technology used",
+              "database": "technology used"
             },
             "files": {
               "relative/path/to/file.ext": "complete file content here",
@@ -77,10 +77,13 @@ jobs:
             }
           }
           Rules:
-          1. Generate at least 20-30 files for a professional Flutter project.
-          2. Include EVERYTHING: pubspec.yaml, lib/ (models, screens, services, widgets), and full android/ folder with gradle and manifests.
-          3. Ensure the app is ready for 'flutter build apk'.
-          4. Do NOT use markdown code fences in file contents."""
+          1. app_name must be kebab-case (e.g., "todo-app", "chat-system")
+          2. Generate COMPLETE working code for every file (at least 20-30 files)
+          3. Include: README.md, pubspec.yaml, all lib/ source files, full android/ folder with gradle and manifests
+          4. Tech Stack: Flutter for Frontend, Firebase or Mock for Backend
+          5. Add proper error handling and validation
+          6. Make it production-ready with proper folder structure
+          7. Do NOT use markdown code fences in file contents"""
 
           data = {
               "model": "openai/gpt-4o",
@@ -91,7 +94,7 @@ jobs:
               "response_format": {"type": "json_object"}
           }
 
-          print(f"🧠 Calling GitHub Models for: {idea[:50]}...")
+          print(f"🧠 Generating app for idea: {idea[:100]}...")
           response = requests.post("https://models.github.ai/inference/chat/completions", headers=headers, json=data)
           response.raise_for_status()
           
@@ -111,20 +114,43 @@ jobs:
 
           app_name = app_data['app_name']
           files = app_data['files']
-          base_dir = f"apps/{app_name}"
 
-          print(f"📁 Creating folder: {base_dir}/")
-          os.makedirs(base_dir, exist_ok=True)
+          print(f"📁 Creating folder: {app_name}/")
+          os.makedirs(app_name, exist_ok=True)
 
           for file_path, content in files.items():
-              full_path = os.path.join(base_dir, file_path)
-              os.makedirs(os.path.dirname(full_path), exist_ok=True)
+              full_path = os.path.join(app_name, file_path)
+              dir_path = os.path.dirname(full_path)
+              if dir_path:
+                  os.makedirs(dir_path, exist_ok=True)
               with open(full_path, 'w', encoding='utf-8') as f:
                   f.write(content)
-              print(f" ✅ Created: {file_path}")
+              print(f" ✅ Created: {full_path}")
 
           with open('/tmp/app_name.txt', 'w') as f:
               f.write(app_name)
+          PYEOF
+
+      - name: 📝 Create Summary File
+        run: |
+          python3 << 'PYEOF'
+          import json
+          with open('/tmp/app_data.json', 'r') as f:
+              app_data = json.load(f)
+          app_name = app_data['app_name']
+          summary = f"""# {app_name} - Generated App
+          ## Description
+          {app_data.get('description', 'AI Generated Full-Stack Application')}
+          ## Tech Stack
+          - **Frontend**: {app_data['tech_stack'].get('frontend', 'N/A')}
+          - **Backend**: {app_data['tech_stack'].get('backend', 'N/A')}
+          - **Database**: {app_data['tech_stack'].get('database', 'N/A')}
+          ## Files Generated
+          """
+          for f in app_data['files'].keys():
+              summary += f"- `{f}`\n"
+          with open(f"{app_name}/GENERATED.md", 'w') as f:
+              f.write(summary)
           PYEOF
 
       - name: 🔧 Configure Git
@@ -135,6 +161,6 @@ jobs:
       - name: 📤 Commit and Push Generated App
         run: |
           APP_NAME=$(cat /tmp/app_name.txt)
-          git add "apps/$APP_NAME/"
+          git add "$APP_NAME/"
           git commit -m "🚀 Generated full-stack app: $APP_NAME" || echo "No changes"
           git push origin HEAD
