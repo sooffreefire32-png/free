@@ -45,4 +45,4 @@ Generate the complete Flutter project including:
 - Include a `README.md` inside the generated folder explaining how to run the app.
 
 ---
-**GOAL**: Produce a codebase that is ready for `flutter build apk` without manual code changes. 
+**GOAL**: Produce a codebase that is ready for `flutter build apk` without manual code changes.
