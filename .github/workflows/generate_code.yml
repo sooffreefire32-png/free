@@ -30,15 +30,10 @@ jobs:
       - name: 📖 Read idea.txt
         id: read_idea
         run: |
-          if [ ! -f "idea.txt" ]; then
-            echo "❌ idea.txt not found!"
-            exit 1
-          fi
           IDEA=$(cat idea.txt)
           echo "idea<<EOF" >> $GITHUB_OUTPUT
           echo "$IDEA" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          echo "✅ idea.txt read successfully"
 
       - name: 🤖 Generate App Code via GitHub Models
         env:
@@ -60,50 +55,37 @@ jobs:
               "X-GitHub-Api-Version": "2022-11-28"
           }
 
-          system_prompt = """You are an expert full-stack developer. When given an app idea/prompt, you generate a complete, production-ready full-stack application.
-          You MUST respond with ONLY a valid JSON object (no markdown, no explanation, no code blocks).
-          The JSON structure must be exactly:
+          system_prompt = """You are an expert full-stack developer. Generate a massive, professional Flutter codebase (60+ files).
+          Respond ONLY with a JSON object:
           {
-            "app_name": "folder-name-in-kebab-case",
-            "description": "short description",
-            "tech_stack": {
-              "frontend": "technology used",
-              "backend": "technology used",
-              "database": "technology used"
-            },
+            "app_name": "kebab-case-name",
             "files": {
-              "relative/path/to/file.ext": "complete file content here",
-              "another/path/file.ext": "complete file content here"
+              "lib/features/auth/presentation/login_screen.dart": "...",
+              ...
             }
           }
           Rules:
-          1. app_name must be kebab-case (e.g., "todo-app", "chat-system")
-          2. Generate COMPLETE working code for every file (at least 20-30 files)
-          3. Include: README.md, pubspec.yaml, all lib/ source files, full android/ folder with gradle and manifests
-          4. Tech Stack: Flutter for Frontend, Firebase or Mock for Backend
-          5. Add proper error handling and validation
-          6. Make it production-ready with proper folder structure
-          7. Do NOT use markdown code fences in file contents"""
+          1. Generate at least 60+ files across lib/features (auth, jobs, chat, profile, payments).
+          2. Focus ONLY on the 'lib/' folder and 'pubspec.yaml'. 
+          3. Use Feature-first architecture (data, domain, presentation).
+          4. Do NOT generate android/ files; the system will provide them."""
 
           data = {
               "model": "openai/gpt-4o",
               "messages": [
                   {"role": "system", "content": system_prompt},
-                  {"role": "user", "content": f"Generate a complete Flutter application for this idea:\n\n{idea}"}
+                  {"role": "user", "content": f"Generate 60+ files for this app:\n\n{idea}"}
               ],
               "response_format": {"type": "json_object"}
           }
 
-          print(f"🧠 Generating app for idea: {idea[:100]}...")
           response = requests.post("https://models.github.ai/inference/chat/completions", headers=headers, json=data)
           response.raise_for_status()
-          
-          app_data = response.json()['choices'][0]['message']['content']
           with open('/tmp/app_data.json', 'w') as f:
-              f.write(app_data)
+              f.write(response.json()['choices'][0]['message']['content'])
           PYEOF
 
-      - name: 📁 Create App Files
+      - name: 📁 Create App with Base Template
         run: |
           python3 << 'PYEOF'
           import json
@@ -114,43 +96,31 @@ jobs:
 
           app_name = app_data['app_name']
           files = app_data['files']
-
-          print(f"📁 Creating folder: {app_name}/")
           os.makedirs(app_name, exist_ok=True)
+
+          # --- 1. PROVIDE BASE ANDROID TEMPLATE ---
+          template = {
+              "android/build.gradle": "buildscript { ext.kotlin_version = '1.8.22' \n repositories { google() \n mavenCentral() } \n dependencies { classpath 'com.android.tools.build:gradle:7.3.0' \n classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version\" } }\nallprojects { repositories { google() \n mavenCentral() } }\nrootProject.buildDir = '../build'\nsubprojects { project.buildDir = \"${rootProject.buildDir}/${project.name}\" }\nsubprojects { project.evaluationDependsOn(':app') }\ntask clean(type: Delete) { delete rootProject.buildDir }",
+              "android/app/build.gradle": "def localProperties = new Properties()\ndef localPropertiesFile = rootProject.file('local.properties')\nif (localPropertiesFile.exists()) { localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) } }\ndef flutterRoot = localProperties.getProperty('flutter.sdk')\napply plugin: 'com.android.application'\napply plugin: 'kotlin-android'\napply from: \"$flutterRoot/packages/flutter_tools/gradle/flutter.gradle\"\nandroid { compileSdkVersion 33 \n namespace \"com.example.\" + app_name.replace('-', '_') \n defaultConfig { applicationId \"com.example.\" + app_name.replace('-', '_') \n minSdkVersion 21 \n targetSdkVersion 33 \n versionCode 1 \n versionName \"1.0\" } }\nflutter { source '../..' }",
+              "android/settings.gradle": "include ':app'\ndef localProperties = new Properties()\ndef localPropertiesFile = rootProject.file('local.properties')\nif (localPropertiesFile.exists()) { localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) } }\ndef flutterRoot = localProperties.getProperty('flutter.sdk')\nif (flutterRoot == null) { throw new Exception('Flutter SDK not found.') }\napply from: \"$flutterRoot/packages/flutter_tools/gradle/app_plugin_loader.gradle\"",
+              "android/app/src/main/AndroidManifest.xml": "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"> <application android:label=\"App\" android:icon=\"@mipmap/ic_launcher\"> <activity android:name=\".MainActivity\" android:exported=\"true\"> <intent-filter> <action android:name=\"android.intent.action.MAIN\"/> <category android:name=\"android.intent.category.LAUNCHER\"/> </intent-filter> </activity> </application> </manifest>",
+              "android/gradle/wrapper/gradle-wrapper.properties": "distributionBase=GRADLE_USER_HOME\ndistributionPath=wrapper/dists\nzipStoreBase=GRADLE_USER_HOME\nzipStorePath=wrapper/dists\ndistributionUrl=https\\://services.gradle.org/distributions/gradle-7.5-all.zip",
+              "android/gradle.properties": "org.gradle.jvmargs=-Xmx1536M\nandroid.useAndroidX=true\nandroid.enableJetifier=true"
+          }
+
+          # Combine Template + AI Files
+          for path, content in template.items():
+              if path not in files:
+                  files[path] = content
 
           for file_path, content in files.items():
               full_path = os.path.join(app_name, file_path)
-              dir_path = os.path.dirname(full_path)
-              if dir_path:
-                  os.makedirs(dir_path, exist_ok=True)
+              os.makedirs(os.path.dirname(full_path), exist_ok=True)
               with open(full_path, 'w', encoding='utf-8') as f:
                   f.write(content)
-              print(f" ✅ Created: {full_path}")
 
           with open('/tmp/app_name.txt', 'w') as f:
               f.write(app_name)
-          PYEOF
-
-      - name: 📝 Create Summary File
-        run: |
-          python3 << 'PYEOF'
-          import json
-          with open('/tmp/app_data.json', 'r') as f:
-              app_data = json.load(f)
-          app_name = app_data['app_name']
-          summary = f"""# {app_name} - Generated App
-          ## Description
-          {app_data.get('description', 'AI Generated Full-Stack Application')}
-          ## Tech Stack
-          - **Frontend**: {app_data['tech_stack'].get('frontend', 'N/A')}
-          - **Backend**: {app_data['tech_stack'].get('backend', 'N/A')}
-          - **Database**: {app_data['tech_stack'].get('database', 'N/A')}
-          ## Files Generated
-          """
-          for f in app_data['files'].keys():
-              summary += f"- `{f}`\n"
-          with open(f"{app_name}/GENERATED.md", 'w') as f:
-              f.write(summary)
           PYEOF
 
       - name: 🔧 Configure Git
@@ -162,5 +132,5 @@ jobs:
         run: |
           APP_NAME=$(cat /tmp/app_name.txt)
           git add "$APP_NAME/"
-          git commit -m "🚀 Generated full-stack app: $APP_NAME" || echo "No changes"
+          git commit -m "🚀 Generated massive app with full android structure: $APP_NAME" || echo "No changes"
           git push origin HEAD
