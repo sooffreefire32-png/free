@@ -1,22 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:lance_it/screens/splash_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 void main() {
-  runApp(LanceItApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        // Add your providers here
+      ],
+      child: const LanceItApp(),
+    ),
+  );
 }
+
 class LanceItApp extends StatelessWidget {
+  const LanceItApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Lance-It',
       debugShowCheckedModeBanner: false,
-      title: 'Lance It',
       theme: ThemeData(
-        primaryColor: Color(0xFF2B3137),
-        accentColor: Color(0xFF2ECC71),
-        textTheme: GoogleFonts.openSansTextTheme(
-          Theme.of(context).textTheme,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        textTheme: GoogleFonts.poppinsTextTheme(),
+      ),
+      home: const Scaffold(
+        body: Center(
+          child: Text('Welcome to Lance-It'),
         ),
       ),
-      home: SplashScreen(),
     );
   }
 }
