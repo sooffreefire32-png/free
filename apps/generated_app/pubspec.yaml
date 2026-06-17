@@ -1,20 +1,28 @@
 name: lance_it
-version: 1.0.0+1
-description: A professional freelancing marketplace connecting clients and freelancers.
 
+description: A Professional Freelancing Marketplace app built using Flutter.
+
+version: 1.0.0+1
 environment:
-  sdk: '>=2.17.0 <3.0.0'
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  provider: ^6.0.5
-  http: ^0.15.0
-  intl: ^0.17.0
+  provider: ^6.0.6
+  flutter_bloc: ^8.1.2
   google_fonts: ^3.0.1
+  http: ^0.15.0
+  intl: ^0.18.0
+  cupertino_icons: ^1.0.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+default_target_platform: android
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/

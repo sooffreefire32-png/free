@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:lance_it/screens/auth/login_screen.dart';
+import 'package:lance_it/core/constants/routes.dart';
+import 'package:lance_it/core/constants/colors.dart';
+import 'package:lance_it/core/constants/styles.dart';
 
-void main() {
-  runApp(LanceItApp());
+default void main() {
+  runApp(const LanceItApp());
 }
 
 class LanceItApp extends StatelessWidget {
+  const LanceItApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Lance-It',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: Color(0xFF2B3137),
-        accentColor: Color(0xFF2ECC71),
-        textTheme: GoogleFonts.openSansTextTheme(
-          Theme.of(context).textTheme,
-        ),
+        primaryColor: AppColors.primaryColor,
+        scaffoldBackgroundColor: AppColors.backgroundColor,
+        textTheme: AppStyles.textTheme,
       ),
-      home: LoginScreen(),
+      initialRoute: Routes.initialRoute,
+      routes: Routes.routes,
     );
   }
 }

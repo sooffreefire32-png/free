@@ -1,14 +1,10 @@
-plugins {
-    id 'com.android.application'
-}
-
 android {
-    compileSdkVersion 33
+    compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.lance_it"
-        minSdkVersion 21
-        targetSdkVersion 33
+        applicationId "com.example.lanceit"
+        minSdk 21
+        targetSdk 33
         versionCode 1
         versionName "1.0"
     }
@@ -19,8 +15,20 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation platform('com.google.firebase:firebase-bom:32.1.0')
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'androidx.multidex:multidex:2.0.1'
+    // More dependencies will be added by Flutter at build time.
 }
