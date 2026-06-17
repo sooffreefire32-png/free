@@ -1,0 +1,20 @@
+name: lance_it
+version: 1.0.0+1
+description: A professional freelancing marketplace connecting clients and freelancers.
+
+environment:
+  sdk: '>=2.17.0 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.0.5
+  http: ^0.15.0
+  intl: ^0.17.0
+  google_fonts: ^3.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true
