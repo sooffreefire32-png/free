@@ -34,6 +34,7 @@ jobs:
       - name: Find generated app directory
         id: find_app_dir
         run: |
+          # Find the first folder inside apps/ that isn't empty
           APP_DIR=$(find apps -maxdepth 2 -type d -name "*" | grep -v "apps/$" | head -n 1)
           if [ -z "$APP_DIR" ]; then
             echo "No generated app directory found." >&2
@@ -52,9 +53,9 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES..."
             
-            # Try pub get first
+            # Try pub get
             if ! flutter pub get --directory ${{ env.APP_DIR }} > error_log.txt 2>&1; then
-              echo "Dependency resolution failed. Fixing pubspec..."
+              echo "Dependency resolution failed. Fixing..."
             # Then try build
             elif ! flutter build apk --release --verbose --directory ${{ env.APP_DIR }} > error_log.txt 2>&1; then
               echo "Build failed. Analyzing error..."
@@ -64,54 +65,8 @@ jobs:
               break
             fi
 
-            # If we reach here, something failed. Send to AI.
-            python3 << 'PYEOF'
-            import requests
-            import os
-            import json
-
-            token = os.environ["GITHUB_TOKEN"]
-            app_dir = os.environ["APP_DIR"]
-            
-            with open("error_log.txt", "r") as f:
-                error_log = f.read()[-2000:] # Last 2000 chars
-
-            # Gather current file context (pubspec and main files)
-            context = {}
-            for root, _, files in os.walk(app_dir):
-                for file in files:
-                    if file.endswith(('.dart', '.yaml', '.gradle')):
-                        path = os.path.join(root, file)
-                        with open(path, 'r') as f:
-                            context[path.replace(app_dir + "/", "")] = f.read()
-
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28"
-            }
-
-            data = {
-                "model": "openai/gpt-4o",
-                "messages": [
-                    {"role": "system", "content": "You are a Flutter Build Expert. Fix the provided error. Output ONLY a JSON object: {'files': [{'path': '...', 'content': '...'}]}"},
-                    {"role": "user", "content": f"Error:\n{error_log}\n\nContext:\n{json.dumps(context)}"}
-                ],
-                "response_format": {"type": "json_object"}
-            }
-
-            response = requests.post("https://models.github.ai/inference/chat/completions", headers=headers, json=data)
-            fix_data = response.json()['choices'][0]['message']['content']
-            fixes = json.loads(fix_data)
-
-            for f in fixes.get('files', []):
-                full_path = os.path.join(app_dir, f['path'])
-                os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                with open(full_path, 'w') as out:
-                    out.write(f['content'])
-                print(f"Applied fix to: {f['path']}")
-            PYEOF
+            # Call AI Fixer Script
+            python3 scripts/fix_errors.py
 
             # Commit fix
             git config --global user.name "AI Fixer"
