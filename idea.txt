@@ -4,45 +4,23 @@
 Develop a full-stack-ready Flutter application named "Lance-It" that serves as a marketplace connecting "Clients" (who post jobs) and "Freelancers" (who bid on jobs). The app must be architected for scalability, using a clean directory structure and professional coding standards.
 
 ## 2. PROJECT STRUCTURE REQUIREMENTS
-Generate the complete Flutter project including:
-- **`lib/`**: Use Feature-first or Layered architecture (Data, Domain, Presentation).
-- **`lib/models/`**: Data models for User, Job, Proposal, and Transaction.
-- **`lib/screens/`**: UI for Authentication, Dashboard, Job Posting, Bidding, and Profile.
-- **`lib/services/`**: Mock API services (to be replaced with real backends later).
+Generate a MASSIVE, complete Flutter project (at least 60+ files) including:
+- **`lib/`**: Use Feature-first architecture.
+- **`lib/features/auth/`**: (data, domain, presentation layers)
+- **`lib/features/jobs/`**: (data, domain, presentation layers)
+- **`lib/features/profile/`**: (data, domain, presentation layers)
+- **`lib/features/chat/`**: (data, domain, presentation layers)
+- **`lib/features/payments/`**: (data, domain, presentation layers)
+- **`lib/core/`**: (theme, constants, errors, utils, network)
+- **`lib/shared/`**: (widgets, models)
 - **`android/`**: Full Android configuration including `gradle` files and `AndroidManifest.xml`.
-- **`pubspec.yaml`**: Include dependencies for: `provider` or `flutter_bloc` (state management), `google_fonts`, `http`, and `intl`.
+- **`pubspec.yaml`**: Include all necessary dependencies.
 
-## 3. KEY FEATURES & SCREENS
+## 3. KEY FEATURES
+- Multi-role support (Client/Freelancer)
+- Real-time chat
+- Payment gateway UI
+- Job posting and bidding flow
+- Profile portfolios
 
-### A. Authentication & Onboarding
-- **Login/Signup**: Email/Password and Social Login UI.
-- **Role Selection**: User chooses "I want to Hire" or "I want to Work".
-
-### B. Client Side (Hire)
-- **Job Posting Wizard**: Multi-step form for Job Title, Description, Budget (Fixed/Hourly), and Required Skills.
-- **Manage Jobs**: View active postings and list of received proposals.
-- **Hire Flow**: Select a freelancer and "Initiate Contract".
-
-### C. Freelancer Side (Work)
-- **Job Feed**: Searchable and filterable list of available jobs.
-- **Proposal Submission**: Form to submit a cover letter and bid amount.
-- **My Stats**: View earnings, active contracts, and ratings.
-
-### D. Shared Features
-- **Messaging System**: Real-time chat UI for interview and collaboration.
-- **Profile Management**: Portfolio display, skill tags, and reviews.
-- **Wallet/Payments**: UI for tracking balance, adding payment methods, and withdrawal requests.
-
-## 4. DESIGN SPECIFICATIONS
-- **Theme**: Professional and clean. Primary Color: `#2B3137` (Dark Slate), Secondary: `#2ECC71` (Success Green).
-- **Responsiveness**: Ensure the UI adapts perfectly to various screen sizes.
-- **Animations**: Use subtle transitions between screens and loading states.
-
-## 5. TECHNICAL CONSTRAINTS
-- Use **Flutter 3.x**.
-- Ensure **Null Safety**.
-- Provide detailed comments for complex logic.
-- Include a `README.md` inside the generated folder explaining how to run the app.
-
----
 **GOAL**: Produce a codebase that is ready for `flutter build apk` without manual code changes.
