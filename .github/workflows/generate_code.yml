@@ -93,7 +93,7 @@ jobs:
             print(f'Generated app in {app_dir}')
           "
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
 
       - name: Commit generated code
         run: |

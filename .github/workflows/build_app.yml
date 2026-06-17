@@ -48,7 +48,7 @@ jobs:
       - name: Build and Auto-Fix Loop
         id: build_loop
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
         run: |
           MAX_RETRIES=3
           RETRY_COUNT=0
