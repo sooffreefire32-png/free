@@ -24,3 +24,10 @@ Generate a MASSIVE, complete Flutter project (at least 60+ files) including:
 - Profile portfolios
 
 **GOAL**: Produce a codebase that is ready for `flutter build apk` without manual code changes.
+
+# PROJECT: LANCE-IT - PRO VERSION
+# GOAL: Generate a MASSIVE codebase with 60+ .dart files.
+# ARCHITECTURE: Feature-First (Auth, Jobs, Chat, Profile, Payments, Settings).
+# REQUIREMENT: Every feature must have data, domain, and presentation layers.
+# FINAL: Must include complete android/ folder via template.
+
